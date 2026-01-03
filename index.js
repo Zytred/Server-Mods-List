@@ -1,3 +1,4 @@
+// index.js
 const express = require("express");
 const { Client, GatewayIntentBits } = require("discord.js");
 
@@ -6,29 +7,31 @@ const CHANNEL_ID = process.env.CHANNEL_ID;
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
+// Discord bot ready
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
-  const channel = await client.channels.fetch(CHANNEL_ID);
-  channel.send("Bot is online!");
+  try {
+    const channel = await client.channels.fetch(CHANNEL_ID);
+    await channel.send("Bot is online!");
+  } catch (err) {
+    console.error("Failed to send online message:", err);
+  }
 });
 
 client.login(DISCORD_TOKEN);
 
+// Express server
 const app = express();
 app.use(express.json());
 
 // Health check
-app.get("/", (req, res) => {
-  res.send("Render service is running");
-});
+app.get("/", (req, res) => res.send("Render service is running"));
 
 // GitHub webhook
-app.post("/github-webhook", (req, res) => {
+app.post("/github-webhook", async (req, res) => {
   console.log("Webhook hit!");
   console.log("Event:", req.headers["x-github-event"]);
   console.log("Body keys:", Object.keys(req.body));
-  res.sendStatus(200);
-});
 
   const event = req.headers["x-github-event"];
   if (event === "push" && req.body.commits) {
@@ -36,18 +39,17 @@ app.post("/github-webhook", (req, res) => {
     const pusher = req.body.pusher.name;
     const repo = req.body.repository.full_name;
 
-    client.channels.fetch(CHANNEL_ID)
-      .then(channel => {
-        channel.send(`**${pusher} pushed to ${repo}:**\n${commits}`);
-      })
-      .catch(console.error);
-  } // <-- closes if block
+    try {
+      const channel = await client.channels.fetch(CHANNEL_ID);
+      await channel.send(`**${pusher} pushed to ${repo}:**\n${commits}`);
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    }
+  }
 
-  res.sendStatus(200); // <-- closes app.post
+  res.sendStatus(200); // Always respond
 });
 
 // Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
