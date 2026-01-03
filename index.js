@@ -24,7 +24,11 @@ app.get("/", (req, res) => {
 
 // GitHub webhook
 app.post("/github-webhook", (req, res) => {
-  console.log("GitHub webhook received!");
+  console.log("Webhook hit!");
+  console.log("Event:", req.headers["x-github-event"]);
+  console.log("Body keys:", Object.keys(req.body));
+  res.sendStatus(200);
+});
 
   const event = req.headers["x-github-event"];
   if (event === "push" && req.body.commits) {
